@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "image-share"
+version = "0.1.0"
+authors = [
+{ name="Alex Pope", email="alex@aroundwithalex.dev" }
+]
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating Sytem :: OS Independent"
+]
+
+[tool.uv]
+dev-dependencies = [
+    "nox>=2024.10.9",
+]
