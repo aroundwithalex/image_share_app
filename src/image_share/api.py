@@ -170,20 +170,7 @@ async def get_user_details(user_id: int):
         db: Database object
     """
 
-    fields = {
-        "username": "some_user",
-        "password": "password",
-        "first_name": "First",
-        "last_name": "Last",
-        "city": "Hackerville",
-        "country": "Someplace",
-    }
-
     database = app.state.db
-
-    database.create_tables()
-
-    Users.create(database, **fields)
 
     user = Users.get(database, user_id=user_id)
 

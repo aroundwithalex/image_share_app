@@ -7,10 +7,9 @@ wheels/
 *.egg-info
 
 *DS_STORE*
-*.env*
+/.env*
 
 # Virtual environments
 .venv
 .mise.toml
 .coverage
-.env*
