@@ -20,12 +20,20 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, HttpUrl
 from sqlalchemy.exc import SQLAlchemyError
+import jwt
 
 from image_share.database import ImageShareDB
-from image_share.models import Users, Posts, Follows, LikedPosts, Token, Like, Follower
+from image_share.models import (
+    Users,
+    Posts,
+    Follows,
+    LikedPosts,
+    Token,
+    Like,
+    Follower,
+    TokenData,
+)
 from image_share.auth import ImageShareAuth
-
-logger = logging.getLogger(__name__)
 
 
 async def get_db():

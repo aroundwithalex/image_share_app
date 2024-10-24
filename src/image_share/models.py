@@ -78,6 +78,11 @@ class Users(Tables):
     def create(cls, db, **kwargs):
         """
         Creates a new User instance with associated data points.
+
+        Args:
+            cls: Class instance
+            db: Database instance
+            kwargs: Keyword arguments
         """
 
         crypt_context = ImageShareAuth.get_crypt_context()
@@ -91,6 +96,14 @@ class Users(Tables):
 
     @classmethod
     def get(cls, db, **kwargs):
+        """
+        Gets a user from the database.
+
+        Args:
+            cls: Class instance
+            db: Database instance
+            kwargs: Keyword arguments
+        """
 
         supported_keys = ["post_id", "user_id", "caption", "url", "timestamp"]
 
@@ -105,6 +118,12 @@ class Users(Tables):
     def verify_password(cls, db, username, password):
         """
         Verifies a users password against the hash in the database.
+
+        Args:
+            cls: Class instance
+            db: Database instance
+            username: Username of user
+            password: Password of user
         """
 
         with db.session() as session:
@@ -120,6 +139,12 @@ class Users(Tables):
     def authenticate_user(cls, db, username: str, password: str):
         """
         Authenticates a user against the database.
+
+        Args:
+            cls: Class instance
+            db: Database instance
+            username: Username of user
+            password: Password of user
         """
 
         user = cls.get(db, username=username)
@@ -152,6 +177,11 @@ class Posts(Tables):
     def create(cls, db, **kwargs):
         """
         Creates a post within the database.
+
+        Args:
+            cls: Class instance
+            db: Database instance
+            kwargs: Keyword arguments
         """
 
         with db.session() as session:
@@ -164,6 +194,11 @@ class Posts(Tables):
     def get(cls, db, **kwargs):
         """
         Retrieves a post from the database.
+
+        Args:
+            cls: LikedPost class instance
+            db: Database instance
+            kwargs: Keyword arguments
         """
 
         supported_keys = ["caption", "url", "timestamp"]
@@ -179,6 +214,12 @@ class Posts(Tables):
     def get_posts_by_followers(cls, db, user_id, limit, skip):
         """
         Retreives posts by followers of a given user.
+
+        Args:
+            cls: LikedPost class instance
+            db: Database instance
+            limit: Limit response by number of posts
+            skip: Number of posts to skip
         """
 
         with db.session() as session:
@@ -197,6 +238,12 @@ class Posts(Tables):
     def get_all_posts(cls, db, limit, skip):
         """
         Retreives all posts.
+
+        Args:
+            cls: LikedPost class instance
+            db: Database instance
+            limit: Limit response by number of posts
+            skip: Number of posts to skip
         """
 
         with db.session() as session:
@@ -232,6 +279,11 @@ class Follows(Tables):
     def follow(cls, db, **kwargs):
         """
         Enables one user to follow another.
+
+        Args:
+            cls: LikedPost class instance
+            db: Database instance
+            kwargs: Keyword arguments
         """
 
         if kwargs.get("is_active", None) and kwargs["is_active"] is False:
@@ -247,6 +299,11 @@ class Follows(Tables):
     def unfollow(cls, db, **kwargs):
         """
         Enables a user to unfollow another user.
+
+        Args:
+            cls: LikedPost class instance
+            db: Database instance
+            kwargs: Keyword arguments
         """
 
         with db.session() as session:
@@ -265,6 +322,11 @@ class Follows(Tables):
     def is_following(cls, db, **kwargs):
         """
         Checks to see whether one user is following another.
+
+        Args:
+            cls: LikedPost class instance
+            db: Database instance
+            kwargs: Keyword arguments
         """
 
         supported_keys = ["follower", "follows"]
@@ -281,6 +343,12 @@ class Follows(Tables):
         """
         Gets mutual followers between one user and another by
         finding the intersection of who follows who.
+
+        Args:
+            cls: LikedPost class instance
+            db: Database instance
+            user1_id: First user id
+            user2_id: Second user id
         """
 
         with db.session() as session:
@@ -316,6 +384,11 @@ class Follows(Tables):
         """
         Suggests followers to a user by finding the symmetric
         difference between who follows who.
+
+        Args:
+            cls: LikedPost class instance
+            user1_id: First user ID
+            user2_id: Second user ID
         """
 
         with db.session() as session:
@@ -471,3 +544,7 @@ class Like(BaseModel):
 class Follower(BaseModel):
     user_id: str
     follows: int
+
+
+class TokenData(BaseModel):
+    username: str

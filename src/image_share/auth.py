@@ -160,6 +160,8 @@ class ImageShareAuth:
 
         expiry = credentials["access_token_expire_minutes"]
 
+        expire = datetime.utcnow() + timedelta(minutes=int(expiry))
+
         encoded_data.update({"exp": expiry})
 
         encoded_jwt = jwt.encode(
