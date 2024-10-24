@@ -105,16 +105,16 @@ class ImageShareAuth:
         formatted into a dictionary.
         """
 
-        # required_keys = ["DB_TYPE", "MEMORY"]
+        required_keys = ["DB_TYPE", "MEMORY"]
 
-        # has_required_keys = all(x in self.raw_credentials for x in required_keys)
+        has_required_keys = all(x in self.raw_credentials for x in required_keys)
 
-        # if not has_required_keys:
-        #     raise ValueError("Missing required database keys")
+        if not has_required_keys:
+            raise ValueError("Missing required database keys")
 
-        # filtered_credentials = {
-        #     a: b for a, b in self.raw_credentials.items() if a in required_keys
-        # }
+        filtered_credentials = {
+            a: b for a, b in self.raw_credentials.items() if a in required_keys
+        }
 
         return {a.lower(): b for a, b in self.raw_credentials.items()}
 
@@ -123,7 +123,7 @@ class ImageShareAuth:
         Gets API credentials for generating a JWT token.
         """
 
-        required_keys = ["secret_key", "algorithm", "access_token_expire_minutes"]
+        required_keys = ["SECRET_KEY", "ALGORITHM", "ACCESS_TOKEN_EXPIRE_MINUTES"]
 
         has_required_keys = all(x in self.raw_credentials for x in required_keys)
 
@@ -142,7 +142,7 @@ class ImageShareAuth:
 
         return CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-    def create_access_token(self, data: dict, expires: Optional[timedelta] = None):
+    def create_access_token(self, data: dict):
         """
         Creates a JWT access token.
 
@@ -156,14 +156,11 @@ class ImageShareAuth:
 
         encoded_data = data.copy()
 
-        if expires:
-            expiry = datetime.utcnow() + expires
-        else:
-            expiry = datetime.utcnow() + timedelta(minutes=30)
+        credentials = self.api_credentials()
+
+        expiry = credentials["access_token_expire_minutes"]
 
         encoded_data.update({"exp": expiry})
-
-        credentials = self.api_credentials()
 
         encoded_jwt = jwt.encode(
             encoded_data, credentials["secret_key"], credentials["algorithm"]

@@ -102,14 +102,14 @@ class Users(Tables):
         return result.first()
 
     @classmethod
-    def verify_password(cls, db, user_id, password):
+    def verify_password(cls, db, username, password):
         """
         Verifies a users password against the hash in the database.
         """
 
         with db.session() as session:
             hashed_password = (
-                session.query(cls.password_hash).filter(cls.user_id == user_id)
+                session.query(cls.password_hash).filter(cls.username == username)
             ).first()
 
             crypt_context = ImageShareAuth.get_crypt_context()
@@ -117,17 +117,17 @@ class Users(Tables):
         return crypt_context.verify(password, hashed_password[0])
 
     @classmethod
-    def authenticate_user(cls, db, user_id: str, password: str):
+    def authenticate_user(cls, db, username: str, password: str):
         """
         Authenticates a user against the database.
         """
 
-        user = cls.get(db, user_id=user_id)
+        user = cls.get(db, username=username)
 
         if not user:
             return False
 
-        if not cls.verify_password(db, user_id, password):
+        if not cls.verify_password(db, username, password):
             return False
 
         return user
@@ -457,6 +457,17 @@ class AgeOfMajority(Tables):
     majority_id: Mapped[int] = mapped_column(primary_key=True)
 
 
+# Pydantic models
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+
+class Like(BaseModel):
+    user_id: int
+    post_id: int
+
+
+class Follower(BaseModel):
+    user_id: str
+    follows: int

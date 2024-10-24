@@ -170,3 +170,33 @@ async def test_suggest_followers():
 
         assert response.status_code == 200
         assert response.json()["num_suggested_followers"] == 0
+
+
+@pytest.mark.anyio
+async def test_generate_access_token():
+    """
+    Tests generating an access token.
+    """
+
+    db = ImageShareDB("sqlite", memory=True)
+
+    db.create_tables()
+
+    user_fields = {
+        "username": "some_user",
+        "password": "password",
+        "first_name": "First",
+        "last_name": "Last",
+        "city": "Hackerville",
+        "country": "Someplace",
+    }
+
+    Users.create(db, **user_fields)
+
+    with TestClient(app) as client:
+
+        form_data = {"username": "some_user", "password": "password"}
+        response = client.post("/token", data=form_data)
+
+        assert response.status_code == 200
+        assert response.json()["access_token"].startswith("ey")

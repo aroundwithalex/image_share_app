@@ -100,7 +100,7 @@ class TestUsersTable:
 
         user.create(db, **fields)
 
-        result = user.verify_password(db, user_id=1, password="password")
+        result = user.verify_password(db, username="some_user", password="password")
 
         assert result is True
 
@@ -122,7 +122,7 @@ class TestUsersTable:
 
         user.create(db, **fields)
 
-        result = user.authenticate_user(db, user_id=1, password="password")
+        result = user.authenticate_user(db, username="some_user", password="password")
 
         assert isinstance(result, Users)
 

@@ -114,11 +114,11 @@ class TestImageShareAuth:
             chdir(tempdir)
 
             data = (
-                "db_type=sqlite\n"
-                "memory=true\n"
-                "secret_key=123\n"
-                "algorithm=HS256\n"
-                "access_token_expire_minutes=1"
+                "DB_TYPE=sqlite\n"
+                "MEMORY=true\n"
+                "SECRET_KEY=123\n"
+                "ALGORITHM=HS256\n"
+                "ACCESS_TOKEN_EXPIRE_MINUTES=1"
             )
 
             path = Path(".env")
@@ -127,8 +127,6 @@ class TestImageShareAuth:
             image_share_auth = ImageShareAuth()
 
             credentials = image_share_auth.db_credentials()
-
-            print(credentials, expected)
 
         assert credentials == expected
 
@@ -147,14 +145,14 @@ class TestImageShareAuth:
             chdir(tempdir)
 
             data = (
-                "db_type=sqlite\n"
-                "username=user\n"
-                "password=pwd\n"
-                "host=host\n"
-                "dbname=name\n"
-                "secret_key=123\n"
-                "algorithm=HS256\n"
-                "access_token_expire_minutes=1"
+                "DB_TYPE=sqlite\n"
+                "USERNAME=user\n"
+                "PASSWORD=pwd\n"
+                "HOST=host\n"
+                "DB_NAME=name\n"
+                "SECRET_KEY=123\n"
+                "ALGORITHM=HS256\n"
+                "ACCESS_TOKEN_EXPIRE_MINUTES=1"
             )
 
             path = Path(".env")
@@ -163,6 +161,8 @@ class TestImageShareAuth:
             image_share_auth = ImageShareAuth()
 
             credentials = image_share_auth.api_credentials()
+
+            print(credentials, expected)
 
         assert credentials == expected
 
@@ -183,14 +183,14 @@ class TestImageShareAuth:
             chdir(tempdir)
 
             data = (
-                "db_type=sqlite\n"
-                "username=user\n"
-                "password=pwd\n"
-                "host=host\n"
-                "dbname=name\n"
-                "secret_key=123\n"
-                "algorithm=HS256\n"
-                "access_token_expire_minutes=1"
+                "DB_TYPE=sqlite\n"
+                "USERNAME=user\n"
+                "PASSWORD=pwd\n"
+                "HOST=host\n"
+                "DB_NAME=name\n"
+                "SECRET_KEY=123\n"
+                "ALGORITHM=HS256\n"
+                "ACCESS_TOKEN_EXPIRE_MINUTES=1"
             )
 
             path = Path(".env")

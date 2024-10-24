@@ -15,13 +15,14 @@ import logging
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, UploadFile, HTTPException, Form
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, HttpUrl
 from sqlalchemy.exc import SQLAlchemyError
 
 from image_share.database import ImageShareDB
-from image_share.models import Users, Posts, Follows, LikedPosts
+from image_share.models import Users, Posts, Follows, LikedPosts, Token, Like, Follower
 from image_share.auth import ImageShareAuth
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,7 @@ async def get_db():
 
 
 app: object = FastAPI()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 @app.on_event("startup")
@@ -131,6 +133,33 @@ async def upload_image(
     }
 
 
+@app.post("/token", response_model=Token)
+async def generate_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    """
+    Route for generating an access token.
+
+    Args:
+        form_data: Password form data
+    """
+
+    db = app.state.db
+
+    user = Users.authenticate_user(db, form_data.username, form_data.password)
+
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    auth = ImageShareAuth()
+
+    access_token = auth.create_access_token(data={"sub": user.username})
+
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
 @app.get("/users/{user_id}")
 async def get_user_details(user_id: int):
     """
@@ -163,11 +192,6 @@ async def get_user_details(user_id: int):
 
     serialised_data = jsonable_encoder(user)
     return JSONResponse(content=serialised_data)
-
-
-class Follower(BaseModel):
-    user_id: str
-    follows: int
 
 
 @app.post("/follow/")
@@ -218,11 +242,6 @@ async def unfollow_user(follower: Follower):
             "msg": f"{follower.user_id} unfollowed {follower.follows}",
         }
     )
-
-
-class Like(BaseModel):
-    user_id: int
-    post_id: int
 
 
 @app.post("/posts/like/")
