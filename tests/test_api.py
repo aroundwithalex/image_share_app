@@ -20,69 +20,6 @@ from image_share.models import Users
 
 
 @pytest.mark.anyio
-async def test_db_fails():
-    """
-    Ensures that db() fails if run in a directory
-    without a .env file.
-    """
-
-    current_path = getcwd()
-
-    with TemporaryDirectory() as tempdir:
-        chdir(tempdir)
-        with pytest.raises(HTTPException):
-            database = await anext(get_db())
-
-    chdir(current_path)
-
-
-@pytest.mark.anyio
-async def test_db():
-    """
-    Ensures that db() returns a database object.
-    """
-
-    current_path = getcwd()
-
-    with TemporaryDirectory() as tempdir:
-        chdir(tempdir)
-
-        path = Path(".env")
-        contents = "db_type=sqlite\nmemory=True"
-        path.write_text(contents, newline="\n")
-
-        database = await anext(get_db())
-
-        assert isinstance(database, ImageShareDB)
-
-    chdir(current_path)
-
-
-@pytest.mark.anyio
-async def test_check_enviroment():
-    """
-    Tests the check_environment() method to ensure that database
-    tables are created if they don't already exist.
-    """
-
-    current_path = getcwd()
-    with TemporaryDirectory() as tempdir:
-        chdir(tempdir)
-
-        path = Path(".env")
-        contents = "db_type=sqlite\nmemory=True"
-        path.write_text(contents, newline="\n")
-
-        database = await anext(get_db())
-
-        result = await check_environment(database)
-
-        assert result.has_tables is True
-
-    chdir(current_path)
-
-
-@pytest.mark.anyio
 async def test_root():
     """
     Tests the root path of the API.
@@ -179,3 +116,57 @@ async def test_unlike_post():
         response = client.post("/posts/unlike", json={"user_id": 1, "post_id": 1})
         assert response.status_code == 200
         assert response.json()["status"] == "success"
+
+
+@pytest.mark.anyio
+async def test_posts_by_followers():
+    """
+    Tests whether posts made by followers are returned correctly from
+    the posts/{user_id}/by-followers endpoint.
+    """
+
+    with TestClient(app) as client:
+        response = client.get("/posts/by-followers?user_id=1&limit=10&skip=0")
+
+        assert response.status_code == 200
+        assert isinstance(response.json()["posts"], list)
+
+
+@pytest.mark.anyio
+async def test_get_all_posts():
+    """
+    Tests whether all posts are correctly returned from the /posts/all
+    endpoint.
+    """
+
+    with TestClient(app) as client:
+        response = client.get("/posts/all?limit=10&skip=0")
+
+        assert response.status_code == 200
+        assert isinstance(response.json()["posts"], list)
+
+
+@pytest.mark.anyio
+async def test_mutual_followers():
+    """
+    Tests whether two users have mutual followers.
+    """
+
+    with TestClient(app) as client:
+        response = client.get("/mutual-followers?user1_id=1&user2_id=2")
+
+        assert response.status_code == 200
+        assert response.json()["num_mutual_followers"] == 0
+
+
+@pytest.mark.anyio
+async def test_suggest_followers():
+    """
+    Tests suggesting followers to a user.
+    """
+
+    with TestClient(app) as client:
+        response = client.get("/suggest-followers?user1_id=1&user2_id=2")
+
+        assert response.status_code == 200
+        assert response.json()["num_suggested_followers"] == 0

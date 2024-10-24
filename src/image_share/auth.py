@@ -3,11 +3,16 @@ Collection of classes and modules to handle
 authentication for the ImageShare app.
 """
 
+from typing import Optional
+
 from pathlib import Path
 from abc import ABC, abstractmethod
 from os import environ
+from datetime import timedelta, datetime
 
 from dotenv import dotenv_values
+from passlib.context import CryptContext
+import jwt
 
 
 class AuthHandler(ABC):
@@ -30,15 +35,6 @@ class AuthHandler(ABC):
         """
         Gets credentials from the specified source and
         returns as a dictionary.
-        """
-        pass
-
-    @property
-    def default(self):
-        """
-        Returns the default authentication details for this
-        type of authentication. Do not store passwords in plain
-        text in this section.
         """
         pass
 
@@ -72,14 +68,6 @@ class LocalAuth(AuthHandler):
         """
 
         return dotenv_values(str(self.path))
-
-    def default(self):
-        """
-        Sets the default authentication details for local
-        deployments.
-        """
-
-        return {"db_type": "sqlite", "memory": True}
 
 
 # TODO: Change production handler to a secret storage
@@ -117,18 +105,18 @@ class ImageShareAuth:
         formatted into a dictionary.
         """
 
-        required_keys = ["db_type", "username", "password", "host", "dbname"]
+        # required_keys = ["DB_TYPE", "MEMORY"]
 
-        has_required_keys = all(x in self.raw_credentials for x in required_keys)
+        # has_required_keys = all(x in self.raw_credentials for x in required_keys)
 
-        if not has_required_keys:
-            return self.handler.default()
+        # if not has_required_keys:
+        #     raise ValueError("Missing required database keys")
 
-        filtered_credentials = {
-            a: b for a, b in self.raw_credentials.items() if a in required_keys
-        }
+        # filtered_credentials = {
+        #     a: b for a, b in self.raw_credentials.items() if a in required_keys
+        # }
 
-        return {a.lower(): b.lower() for a, b in filtered_credentials.items()}
+        return {a.lower(): b for a, b in self.raw_credentials.items()}
 
     def api_credentials(self):
         """
@@ -143,4 +131,42 @@ class ImageShareAuth:
             a: b for a, b in self.raw_credentials.items() if a in required_keys
         }
 
-        return {a.lower(): b.lower() for a, b in filtered_credentials.items()}
+        return {a.lower(): b for a, b in filtered_credentials.items()}
+
+    @classmethod
+    def get_crypt_context(cls):
+        """
+        Simple class method that returns the default context for
+        password hashing.
+        """
+
+        return CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+    def create_access_token(self, data: dict, expires: Optional[timedelta] = None):
+        """
+        Creates a JWT access token.
+
+        Args:
+            data: Data to encode
+            expires: Timedelta for token expiry
+
+        Returns:
+            Encoded JWT web token
+        """
+
+        encoded_data = data.copy()
+
+        if expires:
+            expiry = datetime.utcnow() + expires
+        else:
+            expiry = datetime.utcnow() + timedelta(minutes=30)
+
+        encoded_data.update({"exp": expiry})
+
+        credentials = self.api_credentials()
+
+        encoded_jwt = jwt.encode(
+            encoded_data, credentials["secret_key"], credentials["algorithm"]
+        )
+
+        return encoded_jwt

@@ -67,7 +67,7 @@ class TestUsersTable:
 
         fields = {
             "username": "some_user",
-            "password_hash": "password",
+            "password": "password",
             "first_name": "First",
             "last_name": "Last",
             "city": "Hackerville",
@@ -82,6 +82,50 @@ class TestUsersTable:
 
         assert result.username == "some_user"
 
+    def test_verify_password(self, db):
+        """
+        Test verifying a password.
+        """
+
+        fields = {
+            "username": "some_user",
+            "password": "password",
+            "first_name": "First",
+            "last_name": "Last",
+            "city": "Hackerville",
+            "country": "Someplace",
+        }
+
+        user = Users()
+
+        user.create(db, **fields)
+
+        result = user.verify_password(db, user_id=1, password="password")
+
+        assert result is True
+
+    def test_authenticate_user(self, db):
+        """
+        Tests authenticating a user against the database.
+        """
+
+        fields = {
+            "username": "some_user",
+            "password": "password",
+            "first_name": "First",
+            "last_name": "Last",
+            "city": "Hackerville",
+            "country": "Someplace",
+        }
+
+        user = Users()
+
+        user.create(db, **fields)
+
+        result = user.authenticate_user(db, user_id=1, password="password")
+
+        assert isinstance(result, Users)
+
     def test_has_expected_columns(self, db):
         """
         Ensures that the Users table has the expected
@@ -90,7 +134,7 @@ class TestUsersTable:
 
         fields = {
             "username": "some_user",
-            "password_hash": "password",
+            "password": "password",
             "first_name": "First",
             "last_name": "Last",
             "city": "Hackerville",
@@ -139,45 +183,77 @@ class TestPostsTable:
 
         assert results.caption == "Some Caption"
 
-    # def test_get_posts_by_followers(self, db):
-    #     """
-    #     Tests fetching posts by followers.
-    #     """
+    def test_get_posts_by_followers(self, db):
+        """
+        Tests fetching posts by followers.
+        """
 
-    #     user_fields = {
-    #         "username": "some_user1",
-    #         "password_hash": "password",
-    #         "first_name": "First",
-    #         "last_name": "Last",
-    #         "city": "Hackerville",
-    #         "country": "Someplace"
-    #     }
+        user_fields = {
+            "username": "some_user1",
+            "password": "password",
+            "first_name": "First",
+            "last_name": "Last",
+            "city": "Hackerville",
+            "country": "Someplace",
+        }
 
-    #     Users.create(db, **user_fields)
+        Users.create(db, **user_fields)
 
-    #     user2_fields = {
-    #         "username": "some_user2",
-    #         "password_hash": "password",
-    #         "first_name": "First",
-    #         "last_name": "Last",
-    #         "city": "Hackerville",
-    #         "country": "Someplace"
-    #     }
+        user2_fields = {
+            "username": "some_user2",
+            "password": "password",
+            "first_name": "First",
+            "last_name": "Last",
+            "city": "Hackerville",
+            "country": "Someplace",
+        }
 
-    #     Users.create(db, **user_fields)
+        Users.create(db, **user_fields)
 
-    #     Follows.follow(db, follower=2, follows=1)
+        Follows.follow(db, follower=2, follows=1)
 
-    #     post_fields = {
-    #         "user_id": 2,
-    #         "caption": "Some Caption",
-    #         "url": "https://some_url.com",
-    #     }
+        post_fields = {
+            "user_id": 2,
+            "caption": "Some Caption",
+            "url": "https://some_url.com",
+        }
 
-    #     for post in Posts.get_posts_by_followers(db, user_id):
-    #         print(post)
+        Posts.create(db, **post_fields)
 
-    #     assert True is False
+        post = Posts.get_posts_by_followers(db, user_id=1, limit=10, skip=0)
+
+        assert post[0].caption == "Some Caption"
+
+    def test_get_all_posts(self, db):
+        """
+        Tests getting all posts and ordering by number of likes.
+        """
+
+        user_fields = {
+            "username": "some_user1",
+            "password": "password",
+            "first_name": "First",
+            "last_name": "Last",
+            "city": "Hackerville",
+            "country": "Someplace",
+        }
+
+        Users.create(db, **user_fields)
+
+        post_fields = {
+            "user_id": 1,
+            "caption": "Some Caption",
+            "url": "https://some_url.com",
+        }
+
+        Posts.create(db, **post_fields)
+
+        LikedPosts.like(db, user_id=1, post_id=1)
+
+        post = Posts.get_all_posts(db, limit=10, skip=0)
+
+        assert post[0][0].caption == "Some Caption"
+        assert post[0][1] == 1
 
     def test_has_expected_columns(self, db):
         """
@@ -219,7 +295,7 @@ class TestFollowsTable:
 
     user_fields = {
         "username": "some_user",
-        "password_hash": "password",
+        "password": "password",
         "first_name": "First",
         "last_name": "Last",
         "city": "Hackerville",
@@ -228,7 +304,7 @@ class TestFollowsTable:
 
     user2_fields = {
         "username": "some_user2",
-        "password_hash": "password",
+        "password": "password",
         "first_name": "First",
         "last_name": "Last",
         "city": "Hackerville",
@@ -264,6 +340,60 @@ class TestFollowsTable:
         result = Follows.is_following(db, follower=1, follows=2)
         assert result is False
 
+    def test_mutual_followers(self, db):
+        """
+        Tests finding mutual followers.
+        """
+
+        Users.create(db, **self.user_fields)
+
+        Users.create(db, **self.user2_fields)
+
+        user3_fields = {
+            "username": "some_user3",
+            "password": "password",
+            "first_name": "First",
+            "last_name": "Last",
+            "city": "Hackerville",
+            "country": "Someplace",
+        }
+
+        Users.create(db, **user3_fields)
+
+        Follows.follow(db, follower=3, follows=1)
+        Follows.follow(db, follower=3, follows=2)
+
+        result = Follows.mutual_followers(db, user1_id=1, user2_id=2)
+
+        assert isinstance(result[0], Users)
+
+    def test_suggest_followers(self, db):
+        """
+        Tests suggesting followers.
+        """
+
+        Users.create(db, **self.user_fields)
+
+        Users.create(db, **self.user2_fields)
+
+        user3_fields = {
+            "username": "some_user3",
+            "password": "password",
+            "first_name": "First",
+            "last_name": "Last",
+            "city": "Hackerville",
+            "country": "Someplace",
+        }
+
+        Users.create(db, **user3_fields)
+
+        Follows.unfollow(db, follower=3, follows=1)
+        Follows.follow(db, follower=3, follows=2)
+
+        result = Follows.suggest_followers(db, user1_id=1, user2_id=2)
+
+        assert result[0].user_id == 3
+
 
 class TestLikedPostsTable:
     """
@@ -272,7 +402,7 @@ class TestLikedPostsTable:
 
     user_fields = {
         "username": "some_user",
-        "password_hash": "password",
+        "password": "password",
         "first_name": "First",
         "last_name": "Last",
         "city": "Hackerville",

@@ -8,10 +8,23 @@ Typical Usage:
 
 from typing import Optional
 from datetime import datetime
+from itertools import chain
 
-from sqlalchemy import String, SmallInteger, DateTime, ForeignKey, select
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import (
+    String,
+    SmallInteger,
+    DateTime,
+    ForeignKey,
+    select,
+    func,
+    desc,
+    not_,
+)
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, aliased
 from sqlalchemy.sql.functions import now
+from pydantic import BaseModel
+
+from image_share.auth import ImageShareAuth
 
 
 def sanitise_get_args(supported_keys, **kwargs):
@@ -67,6 +80,9 @@ class Users(Tables):
         Creates a new User instance with associated data points.
         """
 
+        crypt_context = ImageShareAuth.get_crypt_context()
+        kwargs["password_hash"] = crypt_context.hash(kwargs.pop("password"))
+
         with db.session() as session:
             new_user = cls(**kwargs)
 
@@ -84,6 +100,37 @@ class Users(Tables):
             result = session.query(cls).filter_by(**sanitised_kwargs)
 
         return result.first()
+
+    @classmethod
+    def verify_password(cls, db, user_id, password):
+        """
+        Verifies a users password against the hash in the database.
+        """
+
+        with db.session() as session:
+            hashed_password = (
+                session.query(cls.password_hash).filter(cls.user_id == user_id)
+            ).first()
+
+            crypt_context = ImageShareAuth.get_crypt_context()
+
+        return crypt_context.verify(password, hashed_password[0])
+
+    @classmethod
+    def authenticate_user(cls, db, user_id: str, password: str):
+        """
+        Authenticates a user against the database.
+        """
+
+        user = cls.get(db, user_id=user_id)
+
+        if not user:
+            return False
+
+        if not cls.verify_password(db, user_id, password):
+            return False
+
+        return user
 
 
 class Posts(Tables):
@@ -127,6 +174,44 @@ class Posts(Tables):
             result = session.query(cls).filter_by(**sanitised_kwargs)
 
         return result.first()
+
+    @classmethod
+    def get_posts_by_followers(cls, db, user_id, limit, skip):
+        """
+        Retreives posts by followers of a given user.
+        """
+
+        with db.session() as session:
+            results = (
+                session.query(cls)
+                .join(Follows, Follows.follower == cls.user_id)
+                .filter(Follows.follows == user_id)
+                .order_by(desc(cls.date_created))
+                .limit(limit)
+                .offset(skip)
+            )
+
+        return results.all()
+
+    @classmethod
+    def get_all_posts(cls, db, limit, skip):
+        """
+        Retreives all posts.
+        """
+
+        with db.session() as session:
+            results = (
+                session.query(
+                    cls, func.count(LikedPosts.liked_post_id).label("like_count")
+                )
+                .join(LikedPosts, LikedPosts.post_id == cls.post_id)
+                .group_by(cls.post_id)
+                .order_by(desc("like_count"))
+                .limit(limit)
+                .offset(skip)
+            )
+
+        return results.all()
 
 
 class Follows(Tables):
@@ -190,6 +275,74 @@ class Follows(Tables):
             result = session.query(cls).filter_by(**sanitised_kwargs).first()
 
         return False if result is None else result.is_active
+
+    @classmethod
+    def mutual_followers(cls, db, user1_id, user2_id):
+        """
+        Gets mutual followers between one user and another by
+        finding the intersection of who follows who.
+        """
+
+        with db.session() as session:
+            follows_1 = (
+                session.query(Follows.follower)
+                .filter(Follows.follows == user1_id)
+                .subquery()
+            )
+            follows_2 = (
+                session.query(Follows.follower)
+                .filter(Follows.follows == user2_id)
+                .subquery()
+            )
+
+            result = (
+                session.query(Follows.follower)
+                .filter(
+                    Follows.follower.in_(follows_1), Follows.follower.in_(follows_2)
+                )
+                .distinct()
+                .all()
+            )
+
+            mutual_followers = list(chain.from_iterable(result))
+
+            if len(mutual_followers) >= 1:
+                mutual_followers = [Users.get(db, user_id=x) for x in mutual_followers]
+
+        return mutual_followers
+
+    @classmethod
+    def suggest_followers(cls, db, user1_id, user2_id):
+        """
+        Suggests followers to a user by finding the symmetric
+        difference between who follows who.
+        """
+
+        with db.session() as session:
+            follows_user1 = (
+                session.query(Follows.follower)
+                .filter(Follows.follows == user1_id)
+                .filter(Follows.is_active == True)
+                .subquery()
+            )
+
+            follows_user2 = (
+                session.query(Follows.follower)
+                .filter(Follows.follows == user2_id)
+                .filter(Follows.is_active == True)
+                .filter(Follows.follower.not_in(follows_user1))
+                .filter(Follows.follower != user1_id)
+                .distinct()
+            )
+
+            suggested_followers = chain.from_iterable(follows_user2)
+
+            if suggested_followers:
+                suggested_followers = [
+                    Users.get(db, user_id=x) for x in suggested_followers
+                ]
+
+            return suggested_followers
 
 
 class FollowedBy(Tables):
@@ -302,3 +455,8 @@ class AgeOfMajority(Tables):
     __tablename__ = "age_of_majority"
 
     majority_id: Mapped[int] = mapped_column(primary_key=True)
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str

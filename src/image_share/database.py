@@ -101,7 +101,7 @@ class SQLiteHandler(DatabaseHandler):
         Makes a connection string for a SQLite database.
         """
 
-        if self.params.get("memory", None) is True:
+        if self.params.get("memory", None):
             return "sqlite://"
 
         path = self.params["path"]
@@ -157,8 +157,6 @@ class ImageShareDB:
         or not.
         """
 
-        print(inspect(self.engine).get_table_names())
-
         return len(inspect(self.engine).get_table_names()) == 6
 
     def create_tables(self):
@@ -191,7 +189,7 @@ class ImageShareDB:
 
         test_user = {
             "username": "some_user",
-            "password_hash": "password",
+            "password": "password",
             "first_name": "First",
             "last_name": "Last",
             "city": "Hackerville",
@@ -202,7 +200,7 @@ class ImageShareDB:
 
         test_user_2 = {
             "username": "some_user2",
-            "password_hash": "another_password",
+            "password": "another_password",
             "first_name": "Alpha",
             "last_name": "Omega",
             "city": "Guido City",

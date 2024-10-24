@@ -36,7 +36,6 @@ async def get_db():
         environ["ImageShare_Env"] = "local"
         auth = ImageShareAuth()
         credentials = auth.db_credentials()
-
         db_type = credentials.pop("db_type")
         db = ImageShareDB(db_type, **credentials)
 
@@ -144,7 +143,7 @@ async def get_user_details(user_id: int):
 
     fields = {
         "username": "some_user",
-        "password_hash": "password",
+        "password": "password",
         "first_name": "First",
         "last_name": "Last",
         "city": "Hackerville",
@@ -275,8 +274,8 @@ async def unlike_post(unlike: Like):
     )
 
 
-@app.get("/posts/{user_id}/by-followers")
-async def posts_by_followers(user_id: int):
+@app.get("/posts/by-followers")
+async def posts_by_followers(user_id: int, limit: int = 10, skip: int = 0):
     """
     Lists posts by followers, sorted by the most
     recent.
@@ -285,16 +284,31 @@ async def posts_by_followers(user_id: int):
         user_id: ID of the user to list posts for
     """
 
+    db = app.state.db
+
+    return JSONResponse(
+        {
+            "posts": Posts.get_posts_by_followers(db, user_id, limit, skip),
+            "limit": limit,
+            "skip": skip,
+        }
+    )
+
 
 @app.get("/posts/all")
-async def all_posts():
+async def all_posts(limit: int = 10, skip: int = 0):
     """
     Lists all posts, sorted by the number of likes.
     """
-    pass
+
+    db = app.state.db
+
+    return JSONResponse(
+        {"posts": Posts.get_all_posts(db, limit, skip), "limit": limit, "skip": skip}
+    )
 
 
-@app.get("/users/{user1_id}/mutual-followers/{user2_id}")
+@app.get("/mutual-followers")
 async def mutual_followers(user1_id: int, user2_id: int):
     """
     Lists mutual followers between two users.
@@ -303,4 +317,36 @@ async def mutual_followers(user1_id: int, user2_id: int):
         user1_id: ID of profile viewer
         user2_id: ID of profile owner
     """
-    pass
+
+    db = app.state.db
+
+    mutual_followers = Follows.mutual_followers(db, user1_id, user2_id)
+
+    return JSONResponse(
+        {
+            "mutual_followers": mutual_followers,
+            "num_mutual_followers": len(mutual_followers),
+        }
+    )
+
+
+@app.get("/suggest-followers")
+async def suggested_followers(user1_id: int, user2_id: int):
+    """
+    Suggests follows to user1 based on who follows user2.
+
+    Args:
+        user1_id: ID of profile viewer
+        user2_id: ID of profile owner
+    """
+
+    db = app.state.db
+
+    suggested_followers = Follows.suggest_followers(db, user1_id, user2_id)
+
+    return JSONResponse(
+        {
+            "suggested_followers": suggested_followers,
+            "num_suggested_followers": len(suggested_followers),
+        }
+    )
