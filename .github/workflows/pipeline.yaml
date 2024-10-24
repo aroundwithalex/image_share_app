@@ -15,7 +15,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.11"]
+        python-version: ["3.13"]
 
     steps:
       # Step 1: Check out the code from the repository
@@ -40,6 +40,15 @@ jobs:
 
       - name: Building wheel
         run: nox -s build
+
+      - name: Create .env file
+        run: |
+          touch.env
+          echo DB_TYPE="sqlite" >> .env
+          echo MEMORY="True" >> .env
+          echo SECRET_KEY=${{ secrets.SECRET_KEY }} >> .env
+          echo ALGORITHM="HS256"
+          echo ACCESS_TOKEN_EXPIRE_MINUTES=30
 
       - name: Running tests
         run: nox -s test

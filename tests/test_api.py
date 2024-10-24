@@ -12,7 +12,7 @@ from httpx import ASGITransport, AsyncClient
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from image_share.api import app, get_db, check_environment, get_current_user
+from image_share.api import app, get_db, check_environment
 
 from image_share.auth import ImageShareAuth
 from image_share.database import ImageShareDB
